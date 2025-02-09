@@ -6,9 +6,8 @@ const rateLimit = require('express-rate-limit');
 const sanitize = require('mongo-sanitize');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
-
-const router = express.Router()
-
+const router = express.Router();
+const { fetchGitHubData, isBranchActive } = require('../utils/fetchGithubStats');
 const decryptTokens = (token) => {
     return jwt.verify(token, process.env.JWT_SECRET);
 };
@@ -158,7 +157,7 @@ router.post('/logout', loginLimiter, userAuth, async (req, res) => {
 
 router.put('/', userAuth, loginLimiter, async (req, res) => {
     console.log("In Update User");
-    const allowedUpdates = ['firstName', 'lastName' ,'email', 'password', 'jenkinsUrl', 'jenkinsToken','sonarURL','sonarToken','githubURL','githubToken']; // Define allowed fields
+    const allowedUpdates = ['firstName', 'lastName' ,'email','username', 'password', 'jenkinsUrl', 'jenkinsToken','sonarURL','sonarToken','githubURL','githubToken','githubUser']; // Define allowed fields
     const updates = Object.keys(req.body);
     const isValidUpdate = updates.every(update => allowedUpdates.includes(update)); // Validate fields
     const user = req.user;
@@ -262,8 +261,7 @@ router.get("/analyze/pipeline", userAuth,async (req, res) => {
             buildNumber: req.body.buildNumber===undefined?'latest':req.body.buildNumber,
         });
     
-        console.log("Logs:", response.data.logs);
-        console.log("AI Analysis:", response.data.analysis);
+        console.log(req.body.buildNumber)
         res.status(200).json(response.data.analysis);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -283,4 +281,115 @@ router.get("/jenkins/chat", userAuth,async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+router.get("/github/stats", userAuth, async (req, res) => {
+    try {
+        const GITHUB_TOKEN = decryptTokens(req.user.githubToken);
+        const GITHUB_OWNER = req.user.githubUser;
+        const GITHUB_REPO = req.user.githubURL;
+
+        // Fetch all stats concurrently
+        const [openPRs, closedPRs, openIssues, closedIssues, branches] = await Promise.all([
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/pulls?state=open`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/pulls?state=closed`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=open`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=closed`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/branches`, GITHUB_TOKEN),
+        ]);
+
+        // Process branch activity
+        let activeBranches = 0;
+        let inactiveBranches = 0;
+        let branchActivity = [];
+
+        if (branches) {
+            const branchStatuses = await Promise.all(
+                branches.map(async (branch) => {
+                    const isActive = await isBranchActive(branch.name, GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN);
+                    return { name: branch.name, active: isActive };
+                })
+            );
+
+            activeBranches = branchStatuses.filter(b => b.active).length;
+            inactiveBranches = branchStatuses.filter(b => !b.active).length;
+            branchActivity = branchStatuses;
+        }
+
+        const stats = {
+            pullRequests: {
+                open: openPRs ? openPRs.length : 0,
+                closed: closedPRs ? closedPRs.length : 0,
+            },
+            issues: {
+                open: openIssues ? openIssues.length : 0,
+                closed: closedIssues ? closedIssues.length : 0,
+            },
+            branches: {
+                total: branches ? branches.length : 0,
+                active: activeBranches,
+                inactive: inactiveBranches,
+                activity: branchActivity, // List of branch activity
+            },
+        };
+
+        res.status(200).json(stats);
+    } catch (error) {
+        console.error("Error fetching GitHub stats:", error.message);
+        res.status(500).json({ error: "Failed to fetch GitHub stats" });
+    }
+});
+
+router.get("/github/commits",userAuth, async (req, res) => {
+    try {
+        const GITHUB_TOKEN = decryptTokens(req.user.githubToken);
+        const GITHUB_OWNER = req.user.githubUser;
+        const GITHUB_REPO = req.user.githubURL;
+        const commits = await fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/commits`,GITHUB_TOKEN);
+
+        if (!commits) return res.status(500).json({ error: "Failed to fetch commits" });
+
+        let totalCommits = commits.length;
+        let commitsPerDay = {};
+        let contributors = {};
+        let commitActivity = [];
+        let codeChanges = [];
+
+        commits.forEach(commit => {
+            const author = commit.commit.author.name;
+            const date = commit.commit.author.date.split("T")[0];
+
+            // Count commits per day
+            commitsPerDay[date] = (commitsPerDay[date] || 0) + 1;
+
+            // Count commits per contributor
+            contributors[author] = (contributors[author] || 0) + 1;
+
+            // Log commit activity
+            commitActivity.push({ author, date, commits: 1 });
+
+            // Additions & deletions (if available)
+            if (commit.stats) {
+                codeChanges.push({
+                    date,
+                    additions: commit.stats.additions,
+                    deletions: commit.stats.deletions
+                });
+            }
+        });
+
+        // Prepare response
+        const stats = {
+            totalCommits,
+            commitsPerDay,
+            topContributors: contributors,
+            commitActivity,
+            codeChanges
+        };
+
+        res.status(200).json(stats);
+    } catch (error) {
+        console.error("Error fetching GitHub commits:", error.message);
+        res.status(500).json({ error: "Failed to fetch commit stats" });
+    }
+});
+
 module.exports = router
