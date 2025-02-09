@@ -159,9 +159,9 @@ llm_engine = ChatOllama(
 )
 
 # Function to fetch Jenkins build logs dynamically
-def get_latest_build_logs(jenkins_url, username, api_token, job_name):
+def get_latest_build_logs(jenkins_url, username, api_token, job_name,build_number):
     try:
-        job_url = f"{jenkins_url}/job/{job_name}/lastBuild/consoleText"
+        job_url = f"{jenkins_url}/job/{job_name}/{build_number}/consoleText"
         response = requests.get(job_url, auth=(username, api_token))
         
         if response.status_code == 200:
@@ -204,11 +204,13 @@ def analyze_logs():
     username = data.get("username")
     api_token = data.get("api_token")
     job_name = data.get("job_name")
+    build_number = data.get("buildNumber")
+    build_number = build_number if build_number else 'lastBuild'
 
     if not jenkins_url or not username or not api_token or not job_name:
         return jsonify({"error": "Missing required fields"}), 400
 
-    logs = get_latest_build_logs(jenkins_url, username, api_token, job_name)
+    logs = get_latest_build_logs(jenkins_url, username, api_token, job_name,build_number)
     
     if "Failed to fetch logs" in logs:
         return jsonify({"error": logs}), 500

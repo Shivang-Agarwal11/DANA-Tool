@@ -258,7 +258,8 @@ router.get("/analyze/pipeline", userAuth,async (req, res) => {
             jenkins_url: "http://localhost:8080",
             username: req.user.jenkinsUser,
             api_token: decryptTokens(req.user.jenkinsToken),
-            job_name: req.body.jobName
+            job_name: req.body.jobName,
+            buildNumber: req.body.buildNumber===undefined?'latest':req.body.buildNumber,
         });
     
         console.log("Logs:", response.data.logs);
