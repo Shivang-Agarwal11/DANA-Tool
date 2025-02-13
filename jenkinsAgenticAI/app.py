@@ -206,7 +206,6 @@ def analyze_logs():
     job_name = data.get("job_name")
     build_number = data.get("buildNumber")
     build_number = build_number if build_number else 'lastBuild'
-    print(build_number)
     if not jenkins_url or not username or not api_token or not job_name:
         return jsonify({"error": "Missing required fields"}), 400
 
