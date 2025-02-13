@@ -159,11 +159,11 @@ llm_engine = ChatOllama(
 )
 
 # Function to fetch Jenkins build logs dynamically
-def get_latest_build_logs(jenkins_url, username, api_token, job_name,build_number):
+def get_latest_build_logs(jenkins_url, username, api_token, job_name, build_number):
     try:
         job_url = f"{jenkins_url}/job/{job_name}/{build_number}/consoleText"
         response = requests.get(job_url, auth=(username, api_token))
-        
+        print(response)
         if response.status_code == 200:
             logs = response.text
             cleaned_logs = re.sub(r'[{}]', '', logs)
@@ -206,7 +206,6 @@ def analyze_logs():
     job_name = data.get("job_name")
     build_number = data.get("buildNumber")
     build_number = build_number if build_number else 'lastBuild'
-
     if not jenkins_url or not username or not api_token or not job_name:
         return jsonify({"error": "Missing required fields"}), 400
 
@@ -231,16 +230,15 @@ def analyze_logs():
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.json
-    print(data)
-    user_message = data.get("message", "")
 
+    user_message = data.get("message", "")
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
 
-    # Maintain message history in request (if any)
+    # Get the message history for context
     message_log = data.get("message_log", [])
 
-    # Build AI response
+    # Build AI response with message context
     prompt_chain = build_prompt_chain(message_log + [{"role": "user", "content": user_message}])
     ai_response = generate_ai_response(prompt_chain)
 
