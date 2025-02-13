@@ -392,4 +392,90 @@ router.get("/github/commits",userAuth, async (req, res) => {
     }
 });
 
+router.get('/jenkins/jobs', userAuth, async (req, res) => {
+    try{
+        const auth = {
+            auth: {
+              username: req.user.jenkinsUser,
+              password: decryptTokens(req.user.jenkinsToken)
+            },
+          };
+        JENKINS_URL = req.user.jenkinsUrl;
+        const response = await axios.get(`${JENKINS_URL}/api/json?tree=jobs[name]`, auth);
+        res.status(200).json(response.data);
+    }  catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+router.post('/jenkins/build/last', userAuth, async (req, res) => {
+    try {
+        // console.log(req)
+        const auth = {
+            auth: {
+              username: req.user.jenkinsUser,
+              password: decryptTokens(req.user.jenkinsToken)
+            },
+          };
+        JENKINS_URL = req.user.jenkinsUrl;
+        JOB_NAME = req.body.jobName;
+        const response = await axios.get(`${JENKINS_URL}/job/${JOB_NAME}/lastBuild/api/json`, auth);
+        res.status(200).json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/jenkins/build/history', userAuth, async (req, res) => {
+    try {
+        const auth = {
+            auth: {
+              username: req.user.jenkinsUser,
+              password: decryptTokens(req.user.jenkinsToken)
+            },
+          };
+        JENKINS_URL = req.user.jenkinsUrl;
+        JOB_NAME = req.body.jobName;
+        const response = await axios.get(
+            `${JENKINS_URL}/job/${JOB_NAME}/api/json?tree=builds[number,status,result,duration,timestamp]`,
+            auth
+          );
+        res.status(200).json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/jenkins/queue', userAuth, async (req, res) => {
+    try {
+        const auth = {
+            auth: {
+              username: req.user.jenkinsUser,
+              password: decryptTokens(req.user.jenkinsToken)
+            },
+          };
+        JENKINS_URL = req.user.jenkinsUrl;
+        const response = await axios.get(`${JENKINS_URL}/queue/api/json`, auth);
+        res.status(200).json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/jenkins/logs', userAuth, async (req, res) => {
+    try {
+        const auth = {
+            auth: {
+              username: req.user.jenkinsUser,
+              password: decryptTokens(req.user.jenkinsToken)
+            },
+          };
+        JENKINS_URL = req.user.jenkinsUrl;
+        JOB_NAME = req.body.jobName;
+        BUILD_NUMBER = req.body.buildNumber;
+        const response = await axios.get(`${JENKINS_URL}/job/${JOB_NAME}/${BUILD_NUMBER}/consoleText`, auth);
+        res.status(200).json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 module.exports = router
