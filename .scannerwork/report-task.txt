@@ -1,0 +1,6 @@
+projectKey=Shivang-Agarwal11_DANA-Tool_b6ba6443-7a45-46a8-ba02-9cb211cd4b45
+serverUrl=http://localhost:9000
+serverVersion=24.12.0.100206
+dashboardUrl=http://localhost:9000/dashboard?id=Shivang-Agarwal11_DANA-Tool_b6ba6443-7a45-46a8-ba02-9cb211cd4b45
+ceTaskId=c3b6f479-d608-4242-931c-4eac8254152e
+ceTaskUrl=http://localhost:9000/api/ce/task?id=c3b6f479-d608-4242-931c-4eac8254152e
