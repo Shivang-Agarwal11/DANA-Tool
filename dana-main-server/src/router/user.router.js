@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const router = express.Router();
 const { fetchGitHubData, isBranchActive } = require('../utils/fetchGithubStats');
+const { fetchSonarQubeStats } = require('../utils/fetchSonarQubeStats');
+
 const decryptTokens = (token) => {
     return jwt.verify(token, process.env.JWT_SECRET);
 };
@@ -42,7 +44,7 @@ router.post('/', loginLimiter, async (req, res) => {
     const user = new User(sanitizedData);
     try {
         await user.save();
-        console.log(user);
+        // console.log(user);
         const token = await user.generateAuthToken();
         return res.status(201).send({
             status: {
@@ -56,7 +58,7 @@ router.post('/', loginLimiter, async (req, res) => {
             }
         })
     } catch (error) {
-        console.log(error);
+        // console.log(error);
         if (error['errorResponse'] != undefined) {
             if (error['errorResponse']['keyPattern'] != undefined) {
                 if (JSON.stringify(error['errorResponse']['keyPattern']).includes('username')) {
@@ -93,6 +95,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         }
         const user = await User.findByCredentials(username, password)
         const token = await user.generateAuthToken()
+        console.log("SUCCESS");
         res.status(200).send({
             status: {
                 code: 200,
@@ -131,7 +134,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
 });
 
-router.post('/logout', loginLimiter, userAuth, async (req, res) => {
+router.post('/logout', userAuth, async (req, res) => {
     console.log("In Logout User");
     const user = req.user
     try {
@@ -157,7 +160,7 @@ router.post('/logout', loginLimiter, userAuth, async (req, res) => {
 
 router.put('/', userAuth, loginLimiter, async (req, res) => {
     console.log("In Update User");
-    const allowedUpdates = ['firstName', 'lastName' ,'email','username', 'password', 'jenkinsUrl', 'jenkinsToken','sonarURL','sonarToken','githubURL','githubToken','githubUser']; // Define allowed fields
+    const allowedUpdates = ['firstName', 'lastName' ,'email','username', 'password', 'jenkinsUrl', 'jenkinsToken','jenkinsUser','sonarURL','sonarToken','sonarProject','githubURL','githubToken','githubUser']; // Define allowed fields
     const updates = Object.keys(req.body);
     const isValidUpdate = updates.every(update => allowedUpdates.includes(update)); // Validate fields
     const user = req.user;
@@ -251,7 +254,7 @@ router.delete('/', loginLimiter, userAuth, async (req, res) => {
     }
 });
 
-router.get("/analyze/pipeline", userAuth,async (req, res) => {
+router.post("/pipeline/analyze", userAuth,async (req, res) => {
     try {
         const response = await axios.post('http://localhost:8089/analyze', {
             jenkins_url: "http://localhost:8080",
@@ -261,12 +264,23 @@ router.get("/analyze/pipeline", userAuth,async (req, res) => {
             buildNumber: req.body.buildNumber===undefined?'latest':req.body.buildNumber,
         });
     
-        console.log(req.body.buildNumber)
+        // console.log(req.body.buildNumber)
         res.status(200).json(response.data.analysis);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
+router.post("/chat", userAuth, async (req, res) => {
+    try {
+        const PYTHON_API_URL = "http://localhost:8089";
+        const response = await axios.post(`${PYTHON_API_URL}/chat`, req.body);
+        res.json(response.data);
+    } catch (error) {
+        res.status(error.response?.status || 500).json({ error: error.message });
+    }
+});
+
 
 router.get("/jenkins/chat", userAuth,async (req, res) => {
     try {
@@ -275,12 +289,125 @@ router.get("/jenkins/chat", userAuth,async (req, res) => {
             message_log: []
         });
         res.status(200).json(response.data);
-        console.log("AI Response:", response);
+        // console.log("AI Response:", response);
     } catch (error) {
         console.error("Error:", error.response.data);
         res.status(500).json({ error: error.message });
     }
 });
+
+router.get("/github/insights", userAuth, async (req, res) => {
+    try {
+        const GITHUB_TOKEN = decryptTokens(req.user.githubToken);
+        const GITHUB_OWNER = req.user.githubUser;
+        const GITHUB_REPO = req.user.githubURL;
+
+        const fetchGitHubData = async (url, token) => {
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/vnd.github.v3+json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`GitHub API request failed: ${response.statusText}`);
+            }
+            return response.json();
+        };
+
+        const [
+            commitActivity,
+            codeFrequency,
+            contributors,
+            trafficViews,
+            trafficClones,
+            forks,
+            openPRs,
+            closedPRs,
+            openIssues,
+            closedIssues,
+            releases,
+            communityProfile,
+            referrers,
+            popularContent,
+            branches
+        ] = await Promise.all([
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/stats/commit_activity`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/stats/code_frequency`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contributors`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/traffic/views`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/traffic/clones`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/forks`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/pulls?state=open`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/pulls?state=closed`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=open`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/issues?state=closed`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/community/profile`, GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/traffic/popular/referrers`,GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/traffic/popular/paths`,GITHUB_TOKEN),
+            fetchGitHubData(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/branches`, GITHUB_TOKEN),
+        ]);
+
+
+         // Process branch activity
+         let activeBranches = 0;
+         let inactiveBranches = 0;
+         let branchActivity = [];
+ 
+         if (branches) {
+             const branchStatuses = await Promise.all(
+                 branches.map(async (branch) => {
+                     const isActive = await isBranchActive(branch.name, GITHUB_OWNER, GITHUB_REPO, GITHUB_TOKEN);
+                     return { name: branch.name, active: isActive };
+                 })
+             );
+ 
+             activeBranches = branchStatuses.filter(b => b.active).length;
+             inactiveBranches = branchStatuses.filter(b => !b.active).length;
+             branchActivity = branchStatuses;
+         }
+         var totalCommits = 0;
+         try{
+            totalCommits= commitActivity ? commitActivity.reduce((sum, week) => sum + week.total, 0) : 0;
+         }
+         catch(error){
+            totalCommits=0;
+         }
+        const insights = {
+            totalCommits: totalCommits,
+            codeFrequency: codeFrequency ? codeFrequency.map(([timestamp, additions, deletions]) => ({ timestamp, additions, deletions })) : [],
+            weeklyCommitActivity: commitActivity ? commitActivity.map(week => ({ week: week.week, commits: week.total })) : [],
+            totalContributors: contributors ? contributors.length : 0,
+            traffic: {
+                views: trafficViews,
+                clones: trafficClones,
+            },
+            totalForks: forks ? forks.length : 0,
+            openPRs: openPRs ? openPRs.length : 0,
+            closedPRs: closedPRs ? closedPRs.length : 0,
+            openIssues: openIssues ? openIssues.length : 0,
+            closedIssues: closedIssues ? closedIssues.length : 0,
+            releases: releases ? releases.length : 0,
+            communityProfile,
+            referrers,
+            popularContent,
+            branches: {
+                total: branches ? branches.length : 0,
+                active: activeBranches,
+                inactive: inactiveBranches,
+                activity: branchActivity, // List of branch activity
+            },
+        };
+
+        res.status(200).json(insights);
+    } catch (error) {
+        console.error("Error fetching GitHub insights:", error.message);
+        res.status(500).json({ error: "Failed to fetch GitHub insights" });
+    }
+});
+
+
 router.get("/github/stats", userAuth, async (req, res) => {
     try {
         const GITHUB_TOKEN = decryptTokens(req.user.githubToken);
@@ -404,7 +531,7 @@ router.get('/jenkins/jobs', userAuth, async (req, res) => {
         const response = await axios.get(`${JENKINS_URL}/api/json?tree=jobs[name]`, auth);
         res.status(200).json(response.data);
     }  catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error });
     }
 });
 router.post('/jenkins/build/last', userAuth, async (req, res) => {
@@ -478,4 +605,16 @@ router.post('/jenkins/logs', userAuth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+router.get("/sonarqube/stats", userAuth,async (req, res) => {
+    try {
+        const SONARQUBE_TOKEN = decryptTokens(req.user.sonarToken);
+        const SONARQUBE_URL = req.user.sonarURL;
+        const PROJECT_KEY = req.user.sonarProject;
+      const stats = await fetchSonarQubeStats(SONARQUBE_URL, SONARQUBE_TOKEN, PROJECT_KEY);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 module.exports = router
