@@ -3,10 +3,9 @@ import { useTheme } from "@mui/material";
 import { tokens } from "../theme";
 // import { mockLineData as data } from "../data/mockData";
 
-const LineChart = ({ isCustomLineColors = false, isDashboard = false , data}) => {
+const LineChart = ({ isCustomLineColors = true, isDashboard = false , data}) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-  console.log(data);
   return (
     <ResponsiveLine
       data={data}
@@ -96,16 +95,16 @@ const LineChart = ({ isCustomLineColors = false, isDashboard = false , data}) =>
           itemDirection: "left-to-right",
           itemWidth: 80,
           itemHeight: 20,
-          itemOpacity: 0.75,
+          itemOpacity: 1,
           symbolSize: 12,
-          symbolShape: "circle",
+          symbolShape: "square",
           symbolBorderColor: "rgba(0, 0, 0, .5)",
           effects: [
             {
               on: "hover",
               style: {
                 itemBackground: "rgba(0, 0, 0, .03)",
-                itemOpacity: 1,
+                itemOpacity: 0.75,
               },
             },
           ],

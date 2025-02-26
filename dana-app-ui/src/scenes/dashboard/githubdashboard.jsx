@@ -90,6 +90,9 @@ const formatCodeFrequencyData = (data) => {
       {/* HEADER */}
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <Header title="Github Dashboard" subtitle="Welcome to your Github Stats Dashboard" />
+        <a href="https://github.com/Shivang-Agarwal11/DANA-Tool" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", fontSize: "20px", color: colors.greenAccent[500], border: `2px solid ${colors.greenAccent[500]}`, padding: "5px 10px", borderRadius: "5px" }}>
+          Open Github Repository
+        </a>
 
         <Box>
           <Button
@@ -343,48 +346,6 @@ const formatCodeFrequencyData = (data) => {
             }
           />
         </Box>
-
-        {/* ROW 2 */}
-        {/* <Box
-          gridColumn="span 8"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-        >
-          <Box
-            mt="25px"
-            p="0 30px"
-            display="flex "
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <Box>
-              <Typography
-                variant="h5"
-                fontWeight="600"
-                color={colors.grey[100]}
-              >
-                Revenue Generated
-              </Typography>
-              <Typography
-                variant="h3"
-                fontWeight="bold"
-                color={colors.greenAccent[500]}
-              >
-                $59,342.32
-              </Typography>
-            </Box>
-            <Box>
-              <IconButton>
-                <DownloadOutlinedIcon
-                  sx={{ fontSize: "26px", color: colors.greenAccent[500] }}
-                />
-              </IconButton>
-            </Box>
-          </Box>
-          <Box height="250px" m="-20px 0 0 0">
-            <LineChart2 commitData={weeklyCommitActivity} codeFrequencyData={codeFrequency} isDashboard={true} />
-          </Box>
-        </Box> */}
         <Box
           gridColumn="span 4"
           gridRow="span 2"
@@ -679,10 +640,10 @@ const formatCodeFrequencyData = (data) => {
             alignItems="center"
             mt="25px"
           >
-            <ProgressCircle size="125" progress={(openIssues-closedIssues)/100}/>
+            <ProgressCircle size="125" progress={closedIssues/(closedIssues+openIssues)} secondaryColor={colors.redAccent[400]}/>
             <Typography
               variant="h5"
-              color={colors.greenAccent[500]}
+              color={colors.redAccent[500]}
               sx={{ mt: "15px" }}
             >
             Open Issues : {openIssues}
@@ -690,39 +651,6 @@ const formatCodeFrequencyData = (data) => {
             <Typography>Closed Issues : {closedIssues}</Typography>
           </Box>
         </Box>
-        {/* <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ padding: "30px 30px 0 30px" }}
-          >
-            Sales Quantity
-          </Typography>
-          <Box height="250px" mt="-20px">
-            <BarChart isDashboard={true} />
-          </Box>
-        </Box> */}
-        {/* <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          padding="30px"
-        >
-          <Typography
-            variant="h5"
-            fontWeight="600"
-            sx={{ marginBottom: "15px" }}
-          >
-            Geography Based Traffic
-          </Typography>
-          <Box height="200px">
-            <GeographyChart isDashboard={true} />
-          </Box>
-        </Box> */}
       </Box>
     </Box>
   );
