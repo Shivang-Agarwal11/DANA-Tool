@@ -26,53 +26,55 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem("authToken") !== null);
   return (
     <ColorModeContext.Provider value={colorMode}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <div className="app">
-          {isAuthenticated && <Sidebar isSidebar={isSidebar} />}
-          <main className="content">
-            {isAuthenticated && <Topbar setIsSidebar={setIsSidebar} />}
-            <Routes>
-              <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Dashboard />
-              </ProtectedRoute>} />
-              <Route path="/jenkins" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <JenkinsDashboard />
-              </ProtectedRoute>} />
-              <Route path="/analyze" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <AnalyzePipeline />
-              </ProtectedRoute>} />
-              <Route path="/sonar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <SonarDashboard />
-              </ProtectedRoute>} />
-              <Route path="/invoices" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Invoices />
-              </ProtectedRoute>} />
-              <Route path="/form" element={
-                <Form  setAuth={setIsAuthenticated}/>}
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <div className="app">
+            {/* <ProtectedRoute isAuthenticated={isAuthenticated}>
+            <Sidebar isSidebar={isSidebar} />
+          </ProtectedRoute> */}
+            {isAuthenticated && <ProtectedRoute isAuthenticated={isAuthenticated}><Sidebar isSidebar={isSidebar} isAuthenticated={isAuthenticated} /></ProtectedRoute>}
+            <main className="content">
+              <Routes>
+                <Route path="/" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Dashboard />
+                </ProtectedRoute>} />
+                <Route path="/jenkins" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <JenkinsDashboard />
+                </ProtectedRoute>} />
+                <Route path="/analyze" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <AnalyzePipeline />
+                </ProtectedRoute>} />
+                <Route path="/sonar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <SonarDashboard />
+                </ProtectedRoute>} />
+                <Route path="/invoices" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Invoices />
+                </ProtectedRoute>} />
+                <Route path="/form" element={
+                  <Form setAuth={setIsAuthenticated} />}
                 />
-              <Route path="/bar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Bar />
-              </ProtectedRoute>} />
-              <Route path="/pie" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Pie />
-              </ProtectedRoute>} />
-              <Route path="/line" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Line />
-              </ProtectedRoute>} />
-              <Route path="/faq" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <FAQ />
-              </ProtectedRoute>} />
-              <Route path="/calendar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Calendar />
-              </ProtectedRoute>} />
-              <Route path="/geography" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
-                <Geography />
-              </ProtectedRoute>} />
-            </Routes>
-          </main>
-        </div>
-      </ThemeProvider>
+                <Route path="/bar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Bar />
+                </ProtectedRoute>} />
+                <Route path="/pie" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Pie />
+                </ProtectedRoute>} />
+                <Route path="/line" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Line />
+                </ProtectedRoute>} />
+                <Route path="/faq" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <FAQ />
+                </ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Calendar />
+                </ProtectedRoute>} />
+                <Route path="/geography" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Geography />
+                </ProtectedRoute>} />
+              </Routes>
+            </main>
+          </div>
+        </ThemeProvider>
     </ColorModeContext.Provider>
   );
 }

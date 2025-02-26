@@ -35,7 +35,7 @@ const Item = ({ title, to, icon, selected, setSelected }) => {
   );
 };
 
-const Sidebar = () => {
+const Sidebar = (isAuthenticated) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -61,6 +61,7 @@ const Sidebar = () => {
         },
       }}
     >
+      {isAuthenticated &&
       <ProSidebar collapsed={isCollapsed}>
         <Menu iconShape="square">
           {/* LOGO AND MENU ICON */}
@@ -180,7 +181,7 @@ const Sidebar = () => {
               color={colors.grey[300]}
               sx={{ m: "15px 0 5px 20px" }}
             >
-              Anlyzing
+              Analyzing
             </Typography>
             <Item
               title="Analyze Pipeline"
@@ -228,6 +229,7 @@ const Sidebar = () => {
           </Box>
         </Menu>
       </ProSidebar>
+            }
     </Box>
   );
 };
