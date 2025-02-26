@@ -1,5 +1,6 @@
 const express = require('express')
 const userAuth = require('../middleware/userAuth')
+
 const User = require('../models/User.model');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
@@ -9,6 +10,7 @@ const axios = require('axios');
 const router = express.Router();
 const { fetchGitHubData, isBranchActive } = require('../utils/fetchGithubStats');
 const { fetchSonarQubeStats } = require('../utils/fetchSonarQubeStats');
+
 
 const decryptTokens = (token) => {
     return jwt.verify(token, process.env.JWT_SECRET);
@@ -271,8 +273,11 @@ router.post("/pipeline/analyze", userAuth,async (req, res) => {
     }
 });
 
+
+
 router.post("/chat", userAuth, async (req, res) => {
     try {
+        console.log(req.body)
         const PYTHON_API_URL = "http://localhost:8089";
         const response = await axios.post(`${PYTHON_API_URL}/chat`, req.body);
         res.json(response.data);
@@ -301,19 +306,6 @@ router.get("/github/insights", userAuth, async (req, res) => {
         const GITHUB_TOKEN = decryptTokens(req.user.githubToken);
         const GITHUB_OWNER = req.user.githubUser;
         const GITHUB_REPO = req.user.githubURL;
-
-        const fetchGitHubData = async (url, token) => {
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: 'application/vnd.github.v3+json',
-                },
-            });
-            if (!response.ok) {
-                throw new Error(`GitHub API request failed: ${response.statusText}`);
-            }
-            return response.json();
-        };
 
         const [
             commitActivity,
