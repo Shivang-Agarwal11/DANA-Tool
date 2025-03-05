@@ -9,8 +9,6 @@ export async function fetchSonarQubeStats(SONARQUBE_URL, SONARQUBE_TOKEN, PROJEC
             },
         });
 
-        console.log(SONARQUBE_TOKEN, SONARQUBE_URL, PROJECT_KEY);
-
         // Fetch project measures (extended metrics)
         const measures = await axiosInstance.get(`/api/measures/component`, {
             params: {
