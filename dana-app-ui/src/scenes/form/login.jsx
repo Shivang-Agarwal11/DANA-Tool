@@ -1,23 +1,25 @@
-import { Box, Button, TextField, Paper } from "@mui/material";
+import { Box, Button, TextField, Paper, Typography,useTheme } from "@mui/material";
 import { Formik } from "formik";
 import * as yup from "yup";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import Header from "../../components/Header";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { apiService } from "../../services/apiServices";
+import { tokens } from "../../theme";
+
 const Form = (props) => {
   const navigate = useNavigate();
   const isNonMobile = useMediaQuery("(min-width:600px)");
+    const theme = useTheme();
+    const colors = tokens(theme.palette.mode);
 
   const handleFormSubmit = async (values) => {
-    // e.preventDefault();
-    console.log(values);
     try {
       const response = await apiService.login(values); // Call the login API
       props.setAuth(true);
       navigate("/");
     } catch (err) {
-      // setError("Invalid username or password");
       console.log(err);
     }
   };
@@ -33,10 +35,7 @@ const Form = (props) => {
       <Paper elevation={3} sx={{ p: 4, width: "100%", maxWidth: 500 }}>
         <Header title="Login" subtitle="Enjoy your dashboard by logging in!!" />
 
-        <Formik
-          onSubmit={handleFormSubmit}
-          initialValues={initialValues}
-        >
+        <Formik onSubmit={handleFormSubmit} initialValues={initialValues}>
           {({
             values,
             errors,
@@ -61,9 +60,8 @@ const Form = (props) => {
                 />
                 <TextField
                   fullWidth
-                  
                   variant="filled"
-                  type="Password"
+                  type="password"
                   label="Password"
                   onBlur={handleBlur}
                   onChange={handleChange}
@@ -75,8 +73,13 @@ const Form = (props) => {
               </Box>
               <Box display="flex" justifyContent="center" mt="20px">
                 <Button type="submit" color="secondary" variant="contained">
-                 Login
+                  Login
                 </Button>
+              </Box>
+              <Box display="flex" justifyContent="center" mt={2}>
+                <Typography variant="h5" color={colors.grey[300]}>
+                  First time user? <Link to="/register" style={{ textDecoration:"None", color:colors.blueAccent[400]}}>Register here</Link>
+                </Typography>
               </Box>
             </form>
           )}

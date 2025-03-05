@@ -19,11 +19,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import JenkinsDashboard from "./scenes/dashboard/jenkinsdashboard";
 import AnalyzePipeline from "./scenes/analyze/AnalyzePipeline";
 import SonarDashboard from "./scenes/dashboard/sonarqubedashboard";
+import SignUp from "./scenes/form/SingnUp";
+import Profile from "./scenes/profile/Profile";
+import AgenticAI from "./scenes/agenticAI/agenticai";
 
 function App() {
   const [theme, colorMode] = useMode();
   const [isSidebar, setIsSidebar] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem("authToken") !== null);
+  const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem("danaAuthToken") !== null);
   return (
     <ColorModeContext.Provider value={colorMode}>
         <ThemeProvider theme={theme}>
@@ -47,12 +50,22 @@ function App() {
                 <Route path="/sonar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
                   <SonarDashboard />
                 </ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Profile />
+                </ProtectedRoute>} />
+                <Route path="/agenticAI" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <AgenticAI />
+                </ProtectedRoute>} />
                 <Route path="/invoices" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
                   <Invoices />
                 </ProtectedRoute>} />
-                <Route path="/form" element={
+                <Route path="/login" element={
                   <Form setAuth={setIsAuthenticated} />}
                 />
+                <Route path="/register" element={
+                  <SignUp setAuth={setIsAuthenticated} />}
+                />
+
                 <Route path="/bar" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
                   <Bar />
                 </ProtectedRoute>} />
@@ -70,6 +83,9 @@ function App() {
                 </ProtectedRoute>} />
                 <Route path="/geography" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
                   <Geography />
+                </ProtectedRoute>} />
+                <Route path="/team" element={<ProtectedRoute isAuthenticated={isAuthenticated}>
+                  <Team type_table="issues"/>
                 </ProtectedRoute>} />
               </Routes>
             </main>

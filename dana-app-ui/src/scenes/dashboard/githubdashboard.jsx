@@ -1,6 +1,8 @@
 import { Alert, Box, Button, IconButton, Typography, useTheme } from "@mui/material";
 import { tokens } from "../../theme";
-import { mockTransactions } from "../../data/mockData";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import EmailIcon from "@mui/icons-material/Email";
 import { Commit, Person, RemoveRedEye, CopyAllOutlined, ForkLeftRounded, CrisisAlertRounded, GitHub, RequestQuote, BroadcastOnHomeOutlined, BroadcastOnPersonalRounded, Alarm, AddAlertOutlined, CrisisAlert, BusAlert, TaxiAlert, AddAlertRounded } from "@mui/icons-material";
@@ -8,10 +10,7 @@ import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import TrafficIcon from "@mui/icons-material/Traffic";
 import Header from "../../components/Header";
-import LineChart from "../../components/LineChart";
-import LineChart2 from "../../components/LineChart2";
-import GeographyChart from "../../components/GeographyChart";
-import BarChart from "../../components/BarChart";
+import Chart from "chart.js/auto";
 import StatBox from "../../components/StatBox";
 import ProgressCircle from "../../components/ProgressCircle";
 import { apiService } from "../../services/apiServices";
@@ -20,47 +19,142 @@ import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const theme = useTheme();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const colors = tokens(theme.palette.mode);
 
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      
-      try{
-      const response = await apiService.getGithubStats();
-      setStats(response.data);
+
+      try {
+        const response = await apiService.getGithubStats();
+        setStats(response.data);
       }
-      catch(error){
-      console.log(error)
-      if(error.status == 401){
-        localStorage.removeItem("authToken");
-        navigate("/form");
+      catch (error) {
+        console.log(error)
+        if (error.status == 401) {
+          localStorage.removeItem("danaAuthToken");
+          navigate("/login");
+        }
       }
-    }
     }; fetchData();
   }, []);
 
   if (!stats) {
     return <div>Loading...</div>;
   }
+  function createCommitChart(callback) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 200;
+    document.body.appendChild(canvas);  // Append canvas to the DOM temporarily
+
+    const ctx = canvas.getContext("2d");
+
+    // Convert timestamp to readable week format
+    const labels = stats.weeklyCommitActivity.map(entry => 
+        new Date(entry.week * 1000).toLocaleDateString()
+    );
+
+    const data = stats.weeklyCommitActivity.map(entry => entry.commits);
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Commits per Week",
+                data: data,
+                backgroundColor: "rgba(75, 192, 192, 0.6)",
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: false,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    setTimeout(() => {
+        const imgData = canvas.toDataURL("image/png");
+        document.body.removeChild(canvas); // Remove canvas after capturing image
+        callback(imgData);
+    }, 1000);
+}
+  const handleDownload = () => {
+    try {
+
+      createCommitChart((chartImage) => {
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(18);
+        doc.text("GitHub Repository Report", 14, 15);
+
+        // Summary Data Table
+        autoTable(doc, {
+            startY: 25,
+            head: [["Metric", "Value"]],
+            body: [
+                ["Total Commits", stats.totalCommits],
+                ["Total Contributors", stats.totalContributors],
+                ["Open PRs", stats.openPRs],
+                ["Closed PRs", stats.closedPRs],
+                ["Open Issues", stats.openIssues],
+                ["Closed Issues", stats.closedIssues],
+                ["Releases", stats.releases],
+                ["Community Health", stats.communityProfile.health_percentage + "%"],
+                ["License", stats.communityProfile.files.license.name]
+            ]
+        });
+
+        // Add Weekly Commit Chart
+        doc.addImage(chartImage, "PNG", 14, doc.lastAutoTable.finalY + 10, 180, 90);
+
+        // Traffic Stats Table
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 110,
+            head: [["Metric", "Count", "Unique"]],
+            body: [
+                ["Views", stats.traffic.views.count, stats.traffic.views.uniques],
+                ["Clones", stats.traffic.clones.count, stats.traffic.clones.uniques]
+            ]
+        });
+
+        // Popular Content Table
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 10,
+            head: [["Path", "Views", "Unique Views"]],
+            body: stats.popularContent.map(content => [content.path, content.count, content.uniques])
+        });
+
+        // Save PDF
+        doc.save("GitHub_Report.pdf");
+    });
+    } catch (error) {
+      console.error("Error downloading report:", error);
+    }
+  };
 
   const formatWeeklyData = (data) => {
     return data.map((entry) => ({
-        date: new Date(entry.week * 1000).toLocaleDateString(), // Convert UNIX timestamp
-        commits: entry.commits
+      date: new Date(entry.week * 1000).toLocaleDateString(), // Convert UNIX timestamp
+      commits: entry.commits
     }));
-};
+  };
 
-const formatCodeFrequencyData = (data) => {
+  const formatCodeFrequencyData = (data) => {
     return data.map((entry) => ({
-        date: new Date(entry.timestamp * 1000).toLocaleDateString(), // Convert UNIX timestamp
-        additions: entry.additions,
-        deletions: Math.abs(entry.deletions) // Convert negative deletions to positive for better visualization
+      date: new Date(entry.timestamp * 1000).toLocaleDateString(), // Convert UNIX timestamp
+      additions: entry.additions,
+      deletions: Math.abs(entry.deletions) // Convert negative deletions to positive for better visualization
     }));
-};
-  const stripDate= (timestamp) =>{
+  };
+  const stripDate = (timestamp) => {
     return timestamp.split("T")[0]; // Extracts only the YYYY-MM-DD part
   }
   const commits = stats.totalCommits;
@@ -78,7 +172,7 @@ const formatCodeFrequencyData = (data) => {
 
   const clonesTableData = stats.traffic.clones.clones;
   const viewsTableData = stats.traffic.views.views;
-  const branchesTableData = stats.branches.activity;  
+  const branchesTableData = stats.branches.activity;
   const referrersTableData = stats.referrers;
 
   const weeklyCommitActivity = formatWeeklyData(stats.weeklyCommitActivity);
@@ -103,6 +197,7 @@ const formatCodeFrequencyData = (data) => {
               fontWeight: "bold",
               padding: "10px 20px",
             }}
+            onClick={handleDownload}
           >
             <DownloadOutlinedIcon sx={{ mr: "10px" }} />
             Download Reports
@@ -261,11 +356,12 @@ const formatCodeFrequencyData = (data) => {
           <StatBox
             title={openIssues}
             subtitle="Open Issues"
+            textColor="true"
             // progress="0.80"
             // increase="+43%"
             icon={
               <AddAlertOutlined
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
+                sx={{ color: colors.redAccent[600], fontSize: "26px" }}
               />
             }
           />
@@ -387,9 +483,9 @@ const formatCodeFrequencyData = (data) => {
               </Box>
               <Box color={colors.grey[100]}>{stripDate(clones.timestamp)}</Box>
               <Box
-                // backgroundColor={colors.greenAccent[500]}
-                // p="5px 10px"
-                // borderRadius="4px"
+              // backgroundColor={colors.greenAccent[500]}
+              // p="5px 10px"
+              // borderRadius="4px"
               >
                 <Typography
                   color={colors.greenAccent[500]}
@@ -446,9 +542,9 @@ const formatCodeFrequencyData = (data) => {
               </Box>
               <Box color={colors.grey[100]}>{stripDate(view.timestamp)}</Box>
               <Box
-                // backgroundColor={colors.greenAccent[500]}
-                // p="5px 10px"
-                // borderRadius="4px"
+              // backgroundColor={colors.greenAccent[500]}
+              // p="5px 10px"
+              // borderRadius="4px"
               >
                 <Typography
                   color={colors.greenAccent[500]}
@@ -479,7 +575,7 @@ const formatCodeFrequencyData = (data) => {
             p="15px"
           >
             <Typography color={colors.grey[100]} variant="h5" fontWeight="600">
-             Branches Activity
+              Branches Activity
             </Typography>
           </Box>
           {branchesTableData.map((branch, i) => (
@@ -505,9 +601,9 @@ const formatCodeFrequencyData = (data) => {
               </Box>
               {/* <Box color={colors.grey[100]}>{stripDate(clones.timestamp)}</Box> */}
               <Box
-                // backgroundColor={colors.greenAccent[500]}
-                // p="5px 10px"
-                // borderRadius="4px"
+              // backgroundColor={colors.greenAccent[500]}
+              // p="5px 10px"
+              // borderRadius="4px"
               >
                 <Typography
                   color={colors.greenAccent[500]}
@@ -517,7 +613,7 @@ const formatCodeFrequencyData = (data) => {
                   {branch.active}
                 </Typography>
                 <Typography color={colors.grey[100]}>
-                 Active Branch
+                  Active Branch
                 </Typography>
               </Box>
             </Box>
@@ -563,9 +659,9 @@ const formatCodeFrequencyData = (data) => {
                 </Typography>
               </Box>
               <Box
-                // backgroundColor={colors.greenAccent[500]}
-                // p="5px 10px"
-                // borderRadius="4px"
+              // backgroundColor={colors.greenAccent[500]}
+              // p="5px 10px"
+              // borderRadius="4px"
               >
                 <Typography
                   color={colors.greenAccent[500]}
@@ -580,9 +676,9 @@ const formatCodeFrequencyData = (data) => {
               </Box>
               {/* <Box color={colors.grey[100]}>{stripDate(clones.timestamp)}</Box> */}
               <Box
-                // backgroundColor={colors.greenAccent[500]}
-                // p="5px 10px"
-                // borderRadius="4px"
+              // backgroundColor={colors.greenAccent[500]}
+              // p="5px 10px"
+              // borderRadius="4px"
               >
                 <Typography
                   color={colors.greenAccent[500]}
@@ -614,13 +710,13 @@ const formatCodeFrequencyData = (data) => {
             alignItems="center"
             mt="25px"
           >
-            <ProgressCircle size="125" progress={(openPR-closedPR)/100}/>
+            <ProgressCircle size="125" progress={(openPR - closedPR) / 100} />
             <Typography
               variant="h5"
               color={colors.greenAccent[500]}
               sx={{ mt: "15px" }}
             >
-            Open PRs : {openPR}
+              Open PRs : {openPR}
             </Typography>
             <Typography>Closed PRs : {closedPR}</Typography>
           </Box>
@@ -640,13 +736,13 @@ const formatCodeFrequencyData = (data) => {
             alignItems="center"
             mt="25px"
           >
-            <ProgressCircle size="125" progress={closedIssues/(closedIssues+openIssues)} secondaryColor={colors.redAccent[400]}/>
+            <ProgressCircle size="125" progress={closedIssues / (closedIssues + openIssues)} secondaryColor={colors.redAccent[400]} />
             <Typography
               variant="h5"
               color={colors.redAccent[500]}
               sx={{ mt: "15px" }}
             >
-            Open Issues : {openIssues}
+              Open Issues : {openIssues}
             </Typography>
             <Typography>Closed Issues : {closedIssues}</Typography>
           </Box>

@@ -11,7 +11,7 @@ const apiClient = axios.create({
 // Request interceptor to add the Authorization header to all requests except login and signup
 apiClient.interceptors.request.use((config) => {
   if (!config.url.includes('/login') && !config.url.includes('/auth/signup')) {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('danaAuthToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -24,7 +24,7 @@ apiClient.interceptors.response.use((response) => {
   if (response.config.url.includes('/login') || response.config.url.includes('/user')) {
     const token = response.data?.data?.token; // Extract the token from the response
     if (token) {
-      localStorage.setItem('authToken', token); // Save the token to localStorage
+      localStorage.setItem('danaAuthToken', token); // Save the token to localStorage
     }
   }
   return response;
@@ -35,6 +35,8 @@ export const apiService = {
   login: (credentials) => apiClient.post('/login', credentials),
   signup: (userData) => apiClient.post('/', userData),
   logout: () => apiClient.post('/logout'),
+  getUserDetails:()=>apiClient.get('/'),
+  updateUserDetails:()=>apiClient.put('/'),
   getGithubStats: () => apiClient.get('/github/insights'),
   getJenkinsJobs:() => apiClient.get('/jenkins/jobs'),
   getJenkinsLastBuild:(jobName) => apiClient.post('/jenkins/build/last', jobName),
@@ -43,6 +45,7 @@ export const apiService = {
   getJenkinsLogs:(jenkinsData) =>apiClient.post('/jenkins/logs', jenkinsData),
   analyzePipeline:(jenkinsData) => apiClient.post('/pipeline/analyze',jenkinsData),
   chatWithAnalysis:(messageData) => apiClient.post("/chat",messageData),
-  // Device Management APIs
+  createGithubIssue:(inputText)=>apiClient.post("/github/create_issue",inputText),
  getSonarQubeStats: () => apiClient.get('/sonarqube/stats'),
+ getJenkinsBuildSteps:(jenkinsData)=>apiClient.post('/jenkins/build/steps',jenkinsData)
 };
