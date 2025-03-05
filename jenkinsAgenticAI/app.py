@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 import requests
 import jwt
@@ -13,6 +12,7 @@ from langchain_core.prompts import (
     AIMessagePromptTemplate,
     ChatPromptTemplate
 )
+import re
 from langchain.prompts import PromptTemplate
 
 app = Flask(__name__)
@@ -173,7 +173,71 @@ def chat():
 
     return jsonify({"response": ai_response})
 
+@app.route('/create-issue',methods=['POST'])
+def create_issue():
+    data= request.json
+    github_user = data.get("github_user")
+    github_repo = data.get("github_repo")
+    github_token = data.get("github_token")
+    issue_text = data.get("issue_text")
+    title=""
+    description=""
+    perform_task("Generating Title and Description","In Progress")
+    time.sleep(2)
+    while(len(title)==0):
+        title, description = get_title_description(issue_text)
+    perform_task("Generating Title and Description","Completed")
+    time.sleep(2)
+    perform_task("Creating Github Issue","In Progress")
+    time.sleep(2)
+    response = create_issue_github(github_repo=github_repo,github_token=github_token,github_user=github_user,title=title,description=description)
+    perform_task("Creating Github Issue","Completed")
+    time.sleep(2)
+    return response
+    
+def get_title_description(issue_text):
+    prompt_template = PromptTemplate(
+    template=(
+        "You will be provided with a summary or text containing information about an issue. "
+        "Your task is to extract the necessary details and generate a **GitHub issue title and description** in the exact format below:\n\n"
+        "**Title:**\n[Provide a concise and relevant title for the issue]\n\n"
+        "**Description:**\n[Provide a clear and structured description of the issue]\n\n"
+        "Strictly follow this format and do not include any analysis or additional information.\n"
+        "-----------------------------\n"
+        "Input Summary/Text:\n{summary}"
+    ),
+    input_variables=["summary"]  # ✅ Expecting only a summary or text input
+    )
+    prompt_chain = build_prompt_chain([
+    {"role": "user", "content": prompt_template.format(summary=issue_text)}
+    ])
+    ai_response = generate_ai_response(prompt_chain)
+    title_match = re.search(r"\*\*Title:\*\* (.+)", ai_response)
+    title = title_match.group(1).strip() if title_match else "Title not found"
 
+    # Extract Description
+    description_match = re.search(r"\*\*Description:\*\*\s+(.+)", ai_response, re.DOTALL)
+    description = description_match.group(1).strip() if description_match else "Description not found"
+    return title,description
+
+def create_issue_github(github_user,github_repo,github_token, title, description):
+    url = f"https://api.github.com/repos/{github_user}/{github_repo}/issues"
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    data = {
+        "title": title,
+        "body": description
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+
+    if response.status_code == 201:
+        issue_url = response.json().get("html_url")
+        return jsonify({"response":f"✅ Issue created successfully: {issue_url}", "status_code":response.status_code})
+    else:
+        return jsonify({"response":f"❌ Failed to create issue: {response.status_code} - {response.text}","status_code":response.status_code})
 # Run Flask App
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8089, debug=True)
