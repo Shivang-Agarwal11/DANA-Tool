@@ -62,7 +62,7 @@ const userSchema = mongoose.Schema({
         required: false,
         trim: true
     },
-    sonarUser:{
+    sonarProject:{
         type: String,
         required: false,
         trim: true

@@ -5,13 +5,13 @@ const userAuth = async (req, res, next) => {
     try {
         const token = req.header('Authorization').replace('Bearer ', '') || req.body.token;
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
         // Check for token expiration
         const currentTime = Date.now();
         const tokenStartTime = decoded.startDate;
         const expirationTime = 60 * 60 * 1000; // 60 minutes in milliseconds
         
         if (currentTime - tokenStartTime > expirationTime) {
+            console.log('Token expired. Please log in again.');
             user.tokens = user.tokens.filter((token1) => {
                 return token1.token !== token
             });

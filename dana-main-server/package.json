@@ -11,6 +11,7 @@
   "author": "Shivang Agarwal",
   "license": "ISC",
   "dependencies": {
+    "@octokit/rest": "^21.1.0",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -21,7 +22,9 @@
     "moment-timezone": "^0.5.47",
     "mongo-sanitize": "^1.1.0",
     "mongoose": "^8.10.0",
+    "octokit": "^4.1.1",
     "request": "^2.88.2",
+    "socket.io": "^4.8.1",
     "validator": "^13.12.0"
   }
 }
