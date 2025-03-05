@@ -13,9 +13,12 @@ import StatBox from "../../components/StatBox";
 import ProgressCircle from "../../components/ProgressCircle";
 import { apiService } from "../../services/apiServices";
 import { useEffect, useState } from "react";
+import PipelineWorkflow from "./pipelineWorkflow";
+import { useNavigate } from "react-router-dom";
 
 const JenkinsDashboard = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const colors = tokens(theme.palette.mode);
 
   const [jobs, setJobs] = useState([]);
@@ -61,6 +64,10 @@ const JenkinsDashboard = () => {
       if (response.data.jobs.length > 0) setSelectedJob(response.data.jobs[0].name);
     } catch (error) {
       console.error("Error fetching Jenkins jobs:", error);
+      if (error.status == 401) {
+        localStorage.removeItem("danaAuthToken");
+        navigate("/login");
+      }
     }
   };
 
@@ -285,7 +292,6 @@ const JenkinsDashboard = () => {
             <LineChart data={formatBuildStats(data.buildHistory)} isDashboard={true} />
           </Box>
         </Box>
-
         {/* ROW 3 */}
         <Box
           gridColumn="span 6"
@@ -313,6 +319,14 @@ const JenkinsDashboard = () => {
             <Typography>Failed Builds : {buildStatusData["Failures"]}</Typography>
           </Box>
         </Box>
+        {selectedBuild!="" && selectedBuild!=null && <Box
+          gridColumn="span 12"
+          gridRow="span 2"
+          backgroundColor={colors.primary[400]}
+          overflow="auto"
+        >
+          <PipelineWorkflow selectedJob={selectedJob} selectedBuild={selectedBuild} />
+        </Box>}
         <Box
           gridColumn="span 12"
           gridRow="span 3"

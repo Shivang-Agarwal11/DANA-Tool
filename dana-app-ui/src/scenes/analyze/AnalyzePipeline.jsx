@@ -82,8 +82,8 @@ const AnalyzePipeline = () => {
     } catch (error) {
       if (error.status === 401) {
         console.log("Unauthorized");
-        localStorage.removeItem("authToken");
-        navigate("/form");
+        localStorage.removeItem("danaAuthToken");
+        navigate("/login");
       }
       console.error("Error fetching Jenkins jobs:", error);
     }
@@ -104,7 +104,7 @@ const AnalyzePipeline = () => {
       console.error("Error fetching Jenkins data:", error);
       if (error.status === 401) {
         console.log("Unauthorized");
-        navigate("/form");
+        navigate("/login");
       }
     }
   };
@@ -249,17 +249,18 @@ const AnalyzePipeline = () => {
           <Box flexDirection="column" p="15px" gridColumn="span 12" marginTop={0} display="flex" gridRow={updates.length==2? "span 2" : updates.length>=3?"span 3":"span 1"}>
           {updates.length > 0 && updates.map((msg, index) => (
               <Typography 
-              color="#FFFFFF" // White text for high contrast
+              color="rgba(255, 255, 255, 0.81)" // White text for high contrast
               variant="h5" 
               fontWeight="900" 
               backgroundColor="#4A4A4A" // Darker gray for better visibility
               p={2} 
+              mt={1}
               key={index} 
               textAlign="center" 
               borderRadius={5} 
-              border="2px solid rgb(0, 76, 255)" // Gold border for a subtle highlight
+              // border="2px solid rgb(244, 245, 246)" // Gold border for a subtle highlight
               sx={{ 
-                textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)", // Adds text shadow for better readability
+                textShadow: "2px 2px 4px rgba(26, 12, 12, 0.5)", // Adds text shadow for better readability
               }}
             >
               AI Agent performing task: {msg.task} {msg.status}

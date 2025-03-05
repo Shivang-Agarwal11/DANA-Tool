@@ -13,7 +13,9 @@ import LineChart2 from "../../components/LineChart2";
 import GeographyChart from "../../components/GeographyChart";
 import BarChart from "../../components/BarChart";
 import StatBox from "../../components/StatBox";
-import ProgressCircle from "../../components/ProgressCircle";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import Chart from "chart.js/auto";
 import { apiService } from "../../services/apiServices";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -36,8 +38,8 @@ const SonarDashboard = () => {
       catch(error){
       console.log(error)
       if(error.status == 401){
-        localStorage.removeItem("authToken");
-        navigate("/form");
+        localStorage.removeItem("danaAuthToken");
+        navigate("/login");
       }
     }
     }; fetchData();
@@ -54,6 +56,113 @@ const SonarDashboard = () => {
     }));
 };
 
+function createSonarChart(callback) {
+  const canvas = document.createElement("canvas");
+  document.body.appendChild(canvas);
+
+  const ctx = canvas.getContext("2d");
+
+  const labels = stats.measures.map(m => m.metric);
+  const values = stats.measures.map(m => parseFloat(m.value));
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+        labels: labels,
+        datasets: [{
+            label: "SonarQube Metrics",
+            data: values,
+            backgroundColor: "rgba(54, 162, 235, 0.6)",
+            borderColor: "rgba(54, 162, 235, 1)",
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: false,
+        scales: {
+            x: { 
+                ticks: { font: { size: 6 } } // Smaller labels on X-axis
+            },
+            y: { 
+                ticks: { font: { size: 6 } } // Smaller labels on Y-axis
+            }
+        },
+        plugins: {
+            legend: { labels: { font: { size: 6 } } } // Reduce legend text size
+        }
+    }
+});
+
+  setTimeout(() => {
+      const chartImage = canvas.toDataURL("image/png");
+      document.body.removeChild(canvas);
+      callback(chartImage);
+  }, 1000);
+}
+const severityColors = {
+  "BLOCKER": [255, 0, 0],      // Red
+  "CRITICAL": [255, 85, 85],   // Light Red
+  "MAJOR": [255, 165, 0],      // Orange
+  "MINOR": [255, 255, 153],    // Yellow
+  "INFO": [200, 200, 200]      // Light Gray
+};
+function handleDownload() {
+  createSonarChart((chartImage) => {
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(16);
+    doc.text("SonarQube Analysis Report", 14, 15);
+
+    // Project Name
+    doc.setFontSize(12);
+    doc.text(`Project: ${stats.project}`, 14, 25);
+
+    // Quality Gate Status
+    doc.setFontSize(12);
+    doc.setTextColor(stats.qualityGateStatus === "ERROR" ? "red" : "green");
+    doc.text(`Quality Gate Status: ${stats.qualityGateStatus}`, 14, 35);
+
+    // Add Chart Image
+    doc.addImage(chartImage, "PNG", 14, 40, 180, 70);
+
+    // Add Issues Table
+    const issueRows = stats.issues.map(issue => [issue.severity, issue.message]);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Issues:", 14, 120);
+    autoTable(doc, {
+        startY: 125,
+        head: [["Severity", "Message"]],
+        body: issueRows,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: "bold" },
+        columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 150 } },
+        didParseCell: function (data) {
+          if (data.section === 'body' && data.column.index === 0) {
+              const severity = data.cell.raw;
+              if (severityColors[severity]) {
+                  data.cell.styles.fillColor = severityColors[severity]; // Apply color based on severity
+              }
+          }
+      } // Adjusted column width
+    });
+
+    // Add Security Hotspots Table
+    const hotspotRows = stats.securityHotspots.map(hotspot => [hotspot.message, hotspot.status]);
+    doc.text("Security Hotspots:", 14, doc.lastAutoTable.finalY + 10);
+    autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 15,
+        head: [["Message", "Status"]],
+        body: hotspotRows,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [192, 57, 43], textColor: 255, fontStyle: "bold" },
+        columnStyles: { 0: { cellWidth: 150 }, 1: { cellWidth: 30 } } // Adjusted column width
+    });
+
+    // Save PDF
+    doc.save("SonarQube_Report.pdf");
+});
+}
 const formatCodeFrequencyData = (data) => {
     return data.map((entry) => ({
         date: new Date(entry.timestamp * 1000).toLocaleDateString(), // Convert UNIX timestamp
@@ -97,6 +206,7 @@ const formatCodeFrequencyData = (data) => {
               fontWeight: "bold",
               padding: "10px 20px",
             }}
+            onClick={handleDownload}
           >
             <DownloadOutlinedIcon sx={{ mr: "10px" }} />
             Download Reports
@@ -258,10 +368,12 @@ const formatCodeFrequencyData = (data) => {
             title={violations}
             subtitle="Rule Violations Count"
             // progress="0.80"
+            colorTheme="true"
+            textColor="true"
             // increase="+43%"
             icon={
               <AddAlertOutlined
-                sx={{ color: colors.greenAccent[600], fontSize: "26px" }}
+                sx={{ color: colors.redAccent[600], fontSize: "26px" }}
               />
             }
           />
