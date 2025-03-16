@@ -29,6 +29,10 @@ Many enterprises struggle with complex CI/CD configurations, pipeline failures, 
 
 ## 🏗️ Architecture
 
+![image](https://github.com/user-attachments/assets/a3ecafb6-c28e-4be4-b6f6-03276417c0d1)
+
+
+
 DANA consists of three main components:
 
 1. **dana-main-server**: Backend Node.js server with MongoDB integration
